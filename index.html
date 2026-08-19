@@ -69,189 +69,114 @@
           </div>
         </div>
 
-      <!-- Button Starts -->
-      <!-- =========================================
+        <!-- Button Starts -->
+        <!-- =========================================
      ADD & CLEAR BUTTONS
      ========================================= -->
 
-<div class="mt-3 grid grid-cols-2 gap-3">
+        <div class="mt-3 grid grid-cols-2 gap-3">
+          <!-- Add Entry -->
+          <button
+            id="addBtn"
+            class="group relative overflow-hidden rounded-2xl px-4 py-3.5 font-semibold text-white bg-gradient-to-br from-blue-900/80 via-blue-950/80 to-amber-900/40 backdrop-blur-xl shadow-[0_1px_0_rgba(255,255,255,0.25)_inset,0_4px_18px_rgba(10,20,60,0.35)] ring-1 ring-amber-300/30 transition-all duration-200 ease-out hover:brightness-110 hover:shadow-[0_1px_0_rgba(255,255,255,0.3)_inset,0_6px_22px_rgba(10,20,60,0.45)] active:scale-[0.96] active:brightness-95"
+          >
+            <!-- Top shine -->
+            <span
+              class="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-2xl bg-gradient-to-b from-white/25 to-transparent"
+            ></span>
 
-  <!-- Add Entry -->
-  <button
-    id="addBtn"
-    class="group relative overflow-hidden rounded-2xl px-4 py-3.5
-           font-semibold text-white
-           bg-gradient-to-br from-blue-900/80 via-blue-950/80 to-amber-900/40
-           backdrop-blur-xl
-           shadow-[0_1px_0_rgba(255,255,255,0.25)_inset,0_4px_18px_rgba(10,20,60,0.35)]
-           ring-1 ring-amber-300/30
-           transition-all duration-200 ease-out
-           hover:brightness-110
-           hover:shadow-[0_1px_0_rgba(255,255,255,0.3)_inset,0_6px_22px_rgba(10,20,60,0.45)]
-           active:scale-[0.96]
-           active:brightness-95"
-  >
-    <!-- Top shine -->
-    <span
-      class="pointer-events-none absolute inset-x-0 top-0 h-1/2
-             rounded-t-2xl
-             bg-gradient-to-b from-white/25 to-transparent"
-    ></span>
+            <!-- Hover glow -->
+            <span
+              class="pointer-events-none absolute -inset-1 bg-gradient-to-tr from-transparent via-amber-200/10 to-amber-200/25 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+            ></span>
 
-    <!-- Hover glow -->
-    <span
-      class="pointer-events-none absolute -inset-1
-             bg-gradient-to-tr from-transparent
-             via-amber-200/10 to-amber-200/25
-             opacity-0 transition-opacity duration-300
-             group-hover:opacity-100"
-    ></span>
+            <!-- Button content -->
+            <span
+              class="relative flex items-center justify-center gap-2 text-[15px] tracking-tight drop-shadow-sm"
+            >
+              <span class="text-lg leading-none">✙</span>
+              <span>Add Entry</span>
+            </span>
+          </button>
 
-    <!-- Button content -->
-    <span
-      class="relative flex items-center justify-center gap-2
-             text-[15px] tracking-tight drop-shadow-sm"
-    >
-      <span class="text-lg leading-none">✙</span>
-      <span>Add Entry</span>
-    </span>
-  </button>
+          <!-- Clear All -->
+          <button
+            id="clearBtn"
+            class="group relative overflow-hidden rounded-2xl px-4 py-3.5 font-semibold text-white bg-gradient-to-br from-blue-900/80 via-blue-950/80 to-red-900/40 backdrop-blur-xl shadow-[0_1px_0_rgba(255,255,255,0.25)_inset,0_4px_18px_rgba(10,20,60,0.35)] ring-1 ring-red-300/30 transition-all duration-200 ease-out hover:brightness-110 hover:shadow-[0_1px_0_rgba(255,255,255,0.3)_inset,0_6px_22px_rgba(10,20,60,0.45)] active:scale-[0.96] active:brightness-95"
+          >
+            <!-- Top shine -->
+            <span
+              class="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-2xl bg-gradient-to-b from-white/25 to-transparent"
+            ></span>
 
+            <!-- Hover glow -->
+            <span
+              class="pointer-events-none absolute -inset-1 bg-gradient-to-tr from-transparent via-red-200/10 to-red-200/25 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+            ></span>
 
-  <!-- Clear All -->
-  <button
-    id="clearBtn"
-    class="group relative overflow-hidden rounded-2xl px-4 py-3.5
-           font-semibold text-white
-           bg-gradient-to-br from-blue-900/80 via-blue-950/80 to-red-900/40
-           backdrop-blur-xl
-           shadow-[0_1px_0_rgba(255,255,255,0.25)_inset,0_4px_18px_rgba(10,20,60,0.35)]
-           ring-1 ring-red-300/30
-           transition-all duration-200 ease-out
-           hover:brightness-110
-           hover:shadow-[0_1px_0_rgba(255,255,255,0.3)_inset,0_6px_22px_rgba(10,20,60,0.45)]
-           active:scale-[0.96]
-           active:brightness-95"
-  >
-    <!-- Top shine -->
-    <span
-      class="pointer-events-none absolute inset-x-0 top-0 h-1/2
-             rounded-t-2xl
-             bg-gradient-to-b from-white/25 to-transparent"
-    ></span>
+            <!-- Button content -->
+            <span
+              class="relative flex items-center justify-center gap-2 text-[15px] tracking-tight drop-shadow-sm"
+            >
+              <span class="text-lg leading-none">🗑</span>
+              <span>Clear All</span>
+            </span>
+          </button>
+        </div>
 
-    <!-- Hover glow -->
-    <span
-      class="pointer-events-none absolute -inset-1
-             bg-gradient-to-tr from-transparent
-             via-red-200/10 to-red-200/25
-             opacity-0 transition-opacity duration-300
-             group-hover:opacity-100"
-    ></span>
-
-    <!-- Button content -->
-    <span
-      class="relative flex items-center justify-center gap-2
-             text-[15px] tracking-tight drop-shadow-sm"
-    >
-      <span class="text-lg leading-none">🗑</span>
-      <span>Clear All</span>
-    </span>
-  </button>
-
-</div>
-
-
-<!-- =========================================
+        <!-- =========================================
      DOWNLOAD BUTTONS
      ========================================= -->
 
-<div class="mt-3 grid grid-cols-2 gap-3">
+        <div class="mt-3 grid grid-cols-2 gap-3">
+          <!-- Download PDF -->
+          <button
+            id="downloadBtn"
+            class="group relative overflow-hidden rounded-2xl px-4 py-3.5 font-semibold text-white bg-gradient-to-br from-blue-900/80 via-blue-950/80 to-amber-900/40 backdrop-blur-xl shadow-[0_1px_0_rgba(255,255,255,0.25)_inset,0_4px_18px_rgba(10,20,60,0.35)] ring-1 ring-amber-300/30 transition-all duration-200 ease-out hover:brightness-110 hover:shadow-[0_1px_0_rgba(255,255,255,0.3)_inset,0_6px_22px_rgba(10,20,60,0.45)] active:scale-[0.96] active:brightness-95"
+          >
+            <!-- Top shine -->
+            <span
+              class="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-2xl bg-gradient-to-b from-white/25 to-transparent"
+            ></span>
 
-  <!-- Download PDF -->
-  <button
-    id="downloadBtn"
-    class="group relative overflow-hidden rounded-2xl px-4 py-3.5
-           font-semibold text-white
-           bg-gradient-to-br from-blue-900/80 via-blue-950/80 to-amber-900/40
-           backdrop-blur-xl
-           shadow-[0_1px_0_rgba(255,255,255,0.25)_inset,0_4px_18px_rgba(10,20,60,0.35)]
-           ring-1 ring-amber-300/30
-           transition-all duration-200 ease-out
-           hover:brightness-110
-           hover:shadow-[0_1px_0_rgba(255,255,255,0.3)_inset,0_6px_22px_rgba(10,20,60,0.45)]
-           active:scale-[0.96]
-           active:brightness-95"
-  >
-    <!-- Top shine -->
-    <span
-      class="pointer-events-none absolute inset-x-0 top-0 h-1/2
-             rounded-t-2xl
-             bg-gradient-to-b from-white/25 to-transparent"
-    ></span>
+            <!-- Hover glow -->
+            <span
+              class="pointer-events-none absolute -inset-1 bg-gradient-to-tr from-transparent via-amber-200/10 to-amber-200/25 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+            ></span>
 
-    <!-- Hover glow -->
-    <span
-      class="pointer-events-none absolute -inset-1
-             bg-gradient-to-tr from-transparent
-             via-amber-200/10 to-amber-200/25
-             opacity-0 transition-opacity duration-300
-             group-hover:opacity-100"
-    ></span>
+            <!-- Button content -->
+            <span
+              class="relative flex items-center justify-center gap-2 text-[15px] tracking-tight drop-shadow-sm"
+            >
+              <span class="text-base leading-none">📝</span>
+              <span>PDF</span>
+            </span>
+          </button>
 
-    <!-- Button content -->
-    <span
-      class="relative flex items-center justify-center gap-2
-             text-[15px] tracking-tight drop-shadow-sm"
-    >
-      <span class="text-base leading-none">📝</span>
-      <span>PDF</span>
-    </span>
-  </button>
+          <!-- Download Word -->
+          <button
+            id="downloadWordBtn"
+            class="group relative overflow-hidden rounded-2xl px-4 py-3.5 font-semibold text-white bg-gradient-to-br from-blue-900/80 via-blue-950/80 to-amber-900/40 backdrop-blur-xl shadow-[0_1px_0_rgba(255,255,255,0.25)_inset,0_4px_18px_rgba(10,20,60,0.35)] ring-1 ring-amber-300/30 transition-all duration-200 ease-out hover:brightness-110 hover:shadow-[0_1px_0_rgba(255,255,255,0.3)_inset,0_6px_22px_rgba(10,20,60,0.45)] active:scale-[0.96] active:brightness-95"
+          >
+            <!-- Top shine -->
+            <span
+              class="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-2xl bg-gradient-to-b from-white/25 to-transparent"
+            ></span>
 
+            <!-- Hover glow -->
+            <span
+              class="pointer-events-none absolute -inset-1 bg-gradient-to-tr from-transparent via-amber-200/10 to-amber-200/25 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+            ></span>
 
-  <!-- Download Word -->
-  <button
-    id="downloadWordBtn"
-    class="group relative overflow-hidden rounded-2xl px-4 py-3.5
-           font-semibold text-white
-           bg-gradient-to-br from-blue-900/80 via-blue-950/80 to-amber-900/40
-           backdrop-blur-xl
-           shadow-[0_1px_0_rgba(255,255,255,0.25)_inset,0_4px_18px_rgba(10,20,60,0.35)]
-           ring-1 ring-amber-300/30
-           transition-all duration-200 ease-out
-           hover:brightness-110
-           hover:shadow-[0_1px_0_rgba(255,255,255,0.3)_inset,0_6px_22px_rgba(10,20,60,0.45)]
-           active:scale-[0.96]
-           active:brightness-95"
-  >
-    <!-- Top shine -->
-    <span
-      class="pointer-events-none absolute inset-x-0 top-0 h-1/2
-             rounded-t-2xl
-             bg-gradient-to-b from-white/25 to-transparent"
-    ></span>
-
-    <!-- Hover glow -->
-    <span
-      class="pointer-events-none absolute -inset-1
-             bg-gradient-to-tr from-transparent
-             via-amber-200/10 to-amber-200/25
-             opacity-0 transition-opacity duration-300
-             group-hover:opacity-100"
-    ></span>
-
-    <!-- Button content -->
-    <span
-      class="relative flex items-center justify-center gap-2
-             text-[15px] tracking-tight drop-shadow-sm"
-    >
-      <span class="text-base leading-none">📄</span>
-      <span>Word</span>
-    </span>
-  </button>
-
-</div>  
+            <!-- Button content -->
+            <span
+              class="relative flex items-center justify-center gap-2 text-[15px] tracking-tight drop-shadow-sm"
+            >
+              <span class="text-base leading-none">📄</span>
+              <span>Word</span>
+            </span>
+          </button>
+        </div>
 
         <!--  button End -->
 
@@ -290,8 +215,8 @@
         >
           <div id="pdfPage" class="preview-page">
             <img
-            src="images/image.png"
-            alt="AIUB IEEE Header"
+              src="images/image.png"
+              alt="AIUB IEEE Header"
               class="block w-full"
             />
 

@@ -242,19 +242,36 @@ downloadBtn.addEventListener("click", async () => {
   downloadBtn.textContent = "Generating PDF...";
 
   const page = document.getElementById("pdfPage");
+
+  // Save current mobile styles
+  const originalWidth = page.style.width;
+  const originalMinWidth = page.style.minWidth;
+
   page.classList.add("pdf-capture");
 
   try {
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    /*
+     * IMPORTANT:
+     * When downloading from phone, temporarily make the PDF page
+     * exactly the same width as the PC version.
+     */
+    page.style.width = "794px";
+    page.style.minWidth = "794px";
+
+    // Give browser time to apply the desktop-size layout
+    await new Promise((resolve) => setTimeout(resolve, 200));
 
     const canvas = await html2canvas(page, {
-      scale: 10,
+      scale: 3,
       useCORS: true,
       backgroundColor: "#ffffff",
       logging: false,
+      width: 794,
+      windowWidth: 794
     });
 
     const { jsPDF } = window.jspdf;
+
     const pdf = new jsPDF({
       orientation: "portrait",
       unit: "mm",
@@ -264,27 +281,27 @@ downloadBtn.addEventListener("click", async () => {
 
     const pageWidth = 210;
     const pageHeight = 297;
+
     const imgWidth = pageWidth;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-    // Small rounding tolerance so content that just barely fits one page
-    // (a fraction of a millimetre over, from px<->mm conversion) doesn't
-    // spawn a near-empty second page.
     const toleranceMm = 1;
 
     if (imgHeight <= pageHeight + toleranceMm) {
-      // Fits on one page — no distortion, no cropping.
+
+      // One A4 page
       pdf.addImage(
         canvas.toDataURL("image/jpeg", 0.95),
         "JPEG",
         0,
         0,
         imgWidth,
-        imgHeight,
+        imgHeight
       );
+
     } else {
-      // Content is taller than one A4 page: slice the canvas and spread it
-      // across multiple pages instead of squashing it into one.
+
+      // Multiple A4 pages
       const pxPerMm = canvas.width / imgWidth;
       const toleranceForLastSlicePx = toleranceMm * pxPerMm;
       const pageHeightPx = Math.round(pageHeight * pxPerMm);
@@ -293,15 +310,19 @@ downloadBtn.addEventListener("click", async () => {
       let first = true;
 
       while (canvas.height - renderedPx > toleranceForLastSlicePx) {
+
         const sliceHeightPx = Math.min(
           pageHeightPx,
-          canvas.height - renderedPx,
+          canvas.height - renderedPx
         );
 
         const sliceCanvas = document.createElement("canvas");
+
         sliceCanvas.width = canvas.width;
         sliceCanvas.height = sliceHeightPx;
+
         const ctx = sliceCanvas.getContext("2d");
+
         ctx.drawImage(
           canvas,
           0,
@@ -311,19 +332,22 @@ downloadBtn.addEventListener("click", async () => {
           0,
           0,
           canvas.width,
-          sliceHeightPx,
+          sliceHeightPx
         );
 
         const sliceHeightMm = sliceHeightPx / pxPerMm;
 
-        if (!first) pdf.addPage();
+        if (!first) {
+          pdf.addPage();
+        }
+
         pdf.addImage(
           sliceCanvas.toDataURL("image/jpeg", 0.95),
           "JPEG",
           0,
           0,
           imgWidth,
-          sliceHeightMm,
+          sliceHeightMm
         );
 
         renderedPx += sliceHeightPx;
@@ -333,22 +357,39 @@ downloadBtn.addEventListener("click", async () => {
 
     const d = dateInput.value || "attendance";
     const safeDate = d.replaceAll("-", "_");
+
     pdf.save(`IEEE_AIUB_Attendance_${safeDate}.pdf`);
 
     setStatus("PDF downloaded successfully.");
+
   } catch (error) {
+
     console.error(error);
+
     const isTainted = /tainted|SecurityError|insecure/i.test(
-      String(error && error.message),
+      String(error && error.message)
     );
+
     setStatus(
       isTainted
         ? "PDF generation failed: the browser blocked reading the page image."
-        : `PDF generation failed: ${error && error.message ? error.message : "unknown error"}`,
-      "error",
+        : `PDF generation failed: ${
+            error && error.message
+              ? error.message
+              : "unknown error"
+          }`,
+      "error"
     );
+
   } finally {
+
+    // Remove PDF mode
     page.classList.remove("pdf-capture");
+
+    // Restore phone/mobile layout
+    page.style.width = originalWidth;
+    page.style.minWidth = originalMinWidth;
+
     downloadBtn.disabled = false;
     downloadBtn.textContent = originalText;
   }

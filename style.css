@@ -1,0 +1,232 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+
+  /* iPhone / Apple style background */
+  background:
+    radial-gradient(
+      circle at 15% 10%,
+      rgba(255, 255, 255, 0.95),
+      transparent 35%
+    ),
+    radial-gradient(
+      circle at 85% 90%,
+      rgba(225, 225, 230, 0.7),
+      transparent 40%
+    ),
+    #f5f5f7;
+
+  color: #1d1d1f;
+}
+
+/* =========================================
+   GLASS UI
+   ========================================= */
+
+.glass,
+.card,
+.panel {
+  background: rgba(255, 255, 255, 0.68);
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.06);
+  border-radius: 22px;
+}
+
+/* =========================================
+   INPUTS
+   ========================================= */
+
+input,
+select,
+textarea {
+  background: rgba(255, 255, 255, 0.72) !important;
+
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+
+  color: #1d1d1f !important;
+
+  border-radius: 15px !important;
+
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+
+  transition: all 0.2s ease;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+
+  border-color: rgba(0, 0, 0, 0.18) !important;
+
+  box-shadow:
+    0 0 0 4px rgba(0, 0, 0, 0.035),
+    0 5px 15px rgba(0, 0, 0, 0.03);
+
+  background: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* =========================================
+   PREVIEW PAGE
+   ========================================= */
+
+.preview-page {
+  width: 794px;
+  min-height: 1123px;
+
+  background: #fff;
+
+  margin: 0 auto;
+
+  /* Editor shadow removed */
+  box-shadow: none !important;
+
+  border: 1px solid rgba(0, 0, 0, 0.06);
+
+  border-radius: 18px;
+
+  overflow: hidden;
+}
+
+/* =========================================
+   ATTENDANCE TABLE
+   ========================================= */
+
+.attendance-table {
+  border-collapse: collapse;
+
+  width: 100%;
+
+  table-layout: fixed;
+
+  font-size: 12px;
+}
+
+.attendance-table th,
+.attendance-table td {
+  border: 1.5px solid #111827;
+
+  padding: 7px 6px;
+
+  vertical-align: middle;
+
+  color: #111827;
+}
+
+.attendance-table th {
+  font-weight: 700;
+
+  text-align: left;
+
+  background: #fff;
+}
+
+.attendance-table .slot {
+  width: 15%;
+}
+
+.attendance-table .name {
+  width: 23%;
+}
+
+.attendance-table .reporting {
+  width: 17%;
+}
+
+.attendance-table .checkin {
+  width: 15%;
+}
+
+.attendance-table .checkout {
+  width: 15%;
+}
+
+.attendance-table .signature {
+  width: 15%;
+}
+
+.attendance-table td.slot-cell {
+  text-align: left;
+
+  font-weight: 500;
+}
+
+/* =========================================
+   EMPTY STATE
+   ========================================= */
+
+.empty-state {
+  color: #64748b;
+
+  text-align: center;
+
+  padding: 30px 15px;
+
+  border: 1px dashed #cbd5e1;
+
+  border-radius: 14px;
+
+  background: rgba(255, 255, 255, 0.45);
+
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* =========================================
+   PDF CAPTURE MODE
+   ========================================= */
+
+/* PDF-এর সময় glass/shadow থাকবে না */
+
+.pdf-capture {
+  box-shadow: none !important;
+
+  margin: 0 !important;
+
+  border: none !important;
+
+  border-radius: 0 !important;
+}
+
+/* =========================================
+   PRINT
+   ========================================= */
+
+@media print {
+  body {
+    background: white !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .preview-page {
+    box-shadow: none !important;
+
+    margin: 0 !important;
+
+    border: none !important;
+
+    border-radius: 0 !important;
+  }
+
+  .pdf-capture {
+    box-shadow: none !important;
+
+    border: none !important;
+
+    border-radius: 0 !important;
+  }
+}

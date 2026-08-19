@@ -230,3 +230,229 @@ textarea:focus {
     border-radius: 0 !important;
   }
 }
+
+
+
+/* =========================================
+   RESPONSIVE DESIGN
+   ========================================= */
+
+/* Prevent horizontal overflow */
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+
+/* =========================================
+   TABLET
+   ========================================= */
+
+@media (max-width: 1023px) {
+
+  .preview-page {
+    width: 100%;
+    min-height: auto;
+  }
+
+}
+
+
+/* =========================================
+   MOBILE
+   ========================================= */
+
+@media (max-width: 767px) {
+
+  /* Main layout */
+  main {
+    width: 100% !important;
+    max-width: 100% !important;
+
+    grid-template-columns: 1fr !important;
+
+    gap: 16px !important;
+
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    padding-top: 16px !important;
+    padding-bottom: 24px !important;
+  }
+
+
+  /* Header */
+  .no-print.sticky > div {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+    padding-top: 12px !important;
+    padding-bottom: 12px !important;
+  }
+
+
+  .no-print.sticky h1 {
+    font-size: 17px !important;
+  }
+
+
+  /* Left control panel */
+  main > section.no-print {
+    width: 100%;
+    min-width: 0;
+
+    padding: 16px !important;
+
+    position: static !important;
+
+    border-radius: 18px !important;
+  }
+
+
+  /* Inputs */
+  main > section.no-print input,
+  main > section.no-print select,
+  main > section.no-print textarea {
+    width: 100%;
+
+    min-width: 0;
+
+    font-size: 16px !important;
+  }
+
+
+  /* Time + Name */
+  main > section.no-print > div.grid {
+    grid-template-columns: 1fr !important;
+  }
+
+
+  /* Buttons */
+  main > section.no-print button {
+    min-height: 46px;
+  }
+
+
+  /* Entries */
+  #entryList {
+    max-height: 300px !important;
+
+    min-width: 0;
+  }
+
+
+  /* Preview section */
+  main > section:not(.no-print) {
+    width: 100%;
+
+    min-width: 0;
+  }
+
+
+  /* Preview */
+  #pdfPage {
+    width: 100% !important;
+
+    min-width: 0 !important;
+  }
+
+
+  /* Attendance table scroll */
+  #tableWrap {
+    width: 100%;
+
+    overflow-x: auto;
+
+    -webkit-overflow-scrolling: touch;
+  }
+
+
+  .attendance-table {
+    min-width: 720px;
+
+    font-size: 11px;
+  }
+
+
+  .attendance-table th,
+  .attendance-table td {
+    padding: 6px 5px;
+  }
+
+
+  /* Status */
+  #status {
+    word-break: break-word;
+  }
+
+
+  /* Empty state */
+  .empty-state {
+    padding: 24px 12px;
+  }
+
+}
+
+
+/* =========================================
+   SMALL MOBILE
+   ========================================= */
+
+@media (max-width: 420px) {
+
+  main {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+
+  main > section.no-print {
+    padding: 13px !important;
+
+    border-radius: 16px !important;
+  }
+
+
+  .attendance-table {
+    min-width: 680px;
+
+    font-size: 10px;
+  }
+
+
+  .attendance-table th,
+  .attendance-table td {
+    padding: 5px 4px;
+  }
+
+
+  #entryList {
+    max-height: 260px !important;
+  }
+
+}
+
+
+/* =========================================
+   PRINT / PDF
+   ========================================= */
+
+@media print {
+
+  html,
+  body {
+    overflow: visible !important;
+  }
+
+
+  .preview-page {
+    width: 794px !important;
+
+    min-height: 1123px !important;
+  }
+
+
+  .attendance-table {
+    min-width: 0 !important;
+  }
+
+}

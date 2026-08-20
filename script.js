@@ -27,6 +27,354 @@ const statusBox = document.getElementById("status");
 
 const DEFAULT_BRAND_TITLE = "IEEE AIUB Student Branch";
 
+/* =========================================================
+   EXPORT GEOMETRY HELPERS
+
+   The live preview is the SINGLE SOURCE OF TRUTH.
+   Every exported file (PDF and Word) is rebuilt from the
+   measurements and computed styles of the elements that are
+   on screen right now, so nothing is hard-coded twice.
+
+   These helpers are only used while generating a download.
+   They never touch the live preview markup or styling.
+   ========================================================= */
+
+// The preview page is an exact A4 sheet at 96 DPI (794 x 1123 px).
+const A4_WIDTH_PX = 794;
+const A4_WIDTH_MM = 210;
+const A4_HEIGHT_MM = 297;
+const A4_WIDTH_TWIP = 11906; // 210mm
+const A4_HEIGHT_TWIP = 16838; // 297mm
+
+// 1 CSS px = 1/96 in = 0.75 pt = 15 twips = 1.5 half-points = 6 eighth-points
+const pxToTwip = (px) => Math.round((Number(px) || 0) * 15);
+const pxToHalfPoint = (px) => Math.max(2, Math.round((Number(px) || 0) * 1.5));
+const pxToEighthPoint = (px) => Math.max(1, Math.round((Number(px) || 0) * 6));
+const pxToMm = (px) => ((Number(px) || 0) * A4_WIDTH_MM) / A4_WIDTH_PX;
+
+function cssNumber(value) {
+  const n = parseFloat(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function cssColorToHex(value) {
+  const m = String(value).match(/rgba?\(([^)]+)\)/i);
+  if (!m) return "000000";
+
+  const parts = m[1].split(",").map((n) => parseFloat(n));
+  const [r, g, b] = parts;
+
+  // Fully transparent borders should not be drawn as black.
+  if (parts.length > 3 && parts[3] === 0) return "FFFFFF";
+
+  return [r, g, b]
+    .map((n) =>
+      Math.max(0, Math.min(255, Math.round(Number(n) || 0)))
+        .toString(16)
+        .padStart(2, "0"),
+    )
+    .join("")
+    .toUpperCase();
+}
+
+function cssFirstFontFamily(value) {
+  const first = String(value || "")
+    .split(",")[0]
+    .trim()
+    .replace(/^["']|["']$/g, "");
+
+  return first || "Arial";
+}
+
+function cssIsBold(weight) {
+  if (weight === "bold" || weight === "bolder") return true;
+  return (parseInt(weight, 10) || 400) >= 600;
+}
+
+function cssAlignment(value, AlignmentType) {
+  switch (String(value || "").toLowerCase()) {
+    case "center":
+      return AlignmentType.CENTER;
+    case "right":
+    case "end":
+      return AlignmentType.RIGHT;
+    case "justify":
+      return AlignmentType.JUSTIFIED;
+    default:
+      return AlignmentType.LEFT;
+  }
+}
+
+function cssVerticalAlign(value, VerticalAlign) {
+  switch (String(value || "").toLowerCase()) {
+    case "top":
+      return VerticalAlign.TOP;
+    case "bottom":
+      return VerticalAlign.BOTTOM;
+    default:
+      return VerticalAlign.CENTER;
+  }
+}
+
+function cssLineSpacing(computed) {
+  const lineHeight = parseFloat(computed.lineHeight);
+  if (!Number.isFinite(lineHeight)) return undefined;
+
+  return { line: pxToTwip(lineHeight), lineRule: "atLeast" };
+}
+
+/*
+ * Force the preview to its real A4 width while a file is being
+ * generated, so a phone produces exactly the same geometry as a PC.
+ * Returns a function that restores the original inline styles.
+ */
+function lockPreviewToExportWidth(page) {
+  const previous = {
+    width: page.style.width,
+    minWidth: page.style.minWidth,
+  };
+
+  page.style.width = `${A4_WIDTH_PX}px`;
+  page.style.minWidth = `${A4_WIDTH_PX}px`;
+
+  return () => {
+    page.style.width = previous.width;
+    page.style.minWidth = previous.minWidth;
+  };
+}
+
+function isVisibleBlock(el) {
+  if (!el) return false;
+
+  const cs = window.getComputedStyle(el);
+  if (cs.display === "none" || cs.visibility === "hidden") return false;
+
+  return el.textContent.trim().length > 0;
+}
+
+function cleanText(el) {
+  return el.textContent.replace(/\s+/g, " ").trim();
+}
+
+/* ---------------------------------------------------------
+   DOM -> docx builders
+   --------------------------------------------------------- */
+
+/*
+ * Convert one <th>/<td> from the live preview into a Word table
+ * cell that keeps its width, padding, borders, font, horizontal
+ * alignment and vertical alignment.
+ */
+function domCellToDocxCell(cell, widthTwip, docxLib) {
+  const {
+    TableCell,
+    Paragraph,
+    TextRun,
+    WidthType,
+    VerticalAlign,
+    AlignmentType,
+    BorderStyle,
+  } = docxLib;
+
+  const cs = window.getComputedStyle(cell);
+
+  const makeBorder = (widthValue, colorValue, styleValue) => {
+    const width = cssNumber(widthValue);
+    if (!width || styleValue === "none" || styleValue === "hidden") {
+      return { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
+    }
+    return {
+      style: BorderStyle.SINGLE,
+      size: pxToEighthPoint(width),
+      color: cssColorToHex(colorValue),
+    };
+  };
+
+  const text = cleanText(cell);
+  const fontSizePx = cssNumber(cs.fontSize) || 12;
+
+  return new TableCell({
+    width: { size: widthTwip, type: WidthType.DXA },
+    columnSpan: cell.colSpan > 1 ? cell.colSpan : undefined,
+    rowSpan: cell.rowSpan > 1 ? cell.rowSpan : undefined,
+    verticalAlign: cssVerticalAlign(cs.verticalAlign, VerticalAlign),
+    margins: {
+      top: pxToTwip(cssNumber(cs.paddingTop)),
+      bottom: pxToTwip(cssNumber(cs.paddingBottom)),
+      left: pxToTwip(cssNumber(cs.paddingLeft)),
+      right: pxToTwip(cssNumber(cs.paddingRight)),
+    },
+    borders: {
+      top: makeBorder(cs.borderTopWidth, cs.borderTopColor, cs.borderTopStyle),
+      bottom: makeBorder(
+        cs.borderBottomWidth,
+        cs.borderBottomColor,
+        cs.borderBottomStyle,
+      ),
+      left: makeBorder(
+        cs.borderLeftWidth,
+        cs.borderLeftColor,
+        cs.borderLeftStyle,
+      ),
+      right: makeBorder(
+        cs.borderRightWidth,
+        cs.borderRightColor,
+        cs.borderRightStyle,
+      ),
+    },
+    children: [
+      new Paragraph({
+        alignment: cssAlignment(cs.textAlign, AlignmentType),
+        spacing: Object.assign(
+          { before: 0, after: 0 },
+          cssLineSpacing(cs) || {},
+        ),
+        children: [
+          new TextRun({
+            text,
+            bold: cssIsBold(cs.fontWeight),
+            size: pxToHalfPoint(fontSizePx),
+            color: cssColorToHex(cs.color),
+            font: cssFirstFontFamily(cs.fontFamily),
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
+/*
+ * Rebuild the whole preview table in Word using the exact column
+ * widths, row heights and cell styles that are on screen.
+ */
+function domTableToDocxTable(tableEl, page, docxLib) {
+  const { Table, TableRow, WidthType, HeightRule, TableLayoutType } = docxLib;
+
+  const headerCells = Array.from(
+    tableEl.querySelectorAll("thead tr:first-child > *"),
+  );
+
+  const measuredCells = headerCells.length
+    ? headerCells
+    : Array.from(tableEl.querySelectorAll("tr:first-child > *"));
+
+  const columnWidths = measuredCells.map((cell) =>
+    pxToTwip(cell.getBoundingClientRect().width),
+  );
+
+  const totalWidthTwip = columnWidths.reduce((sum, w) => sum + w, 0);
+
+  const pageRect = page.getBoundingClientRect();
+  const tableRect = tableEl.getBoundingClientRect();
+  const indentTwip = pxToTwip(Math.max(0, tableRect.left - pageRect.left));
+
+  const columnCount = columnWidths.length;
+
+  // Tracks how many rows are still covered by a rowspan started above,
+  // so a cell that follows a merged cell keeps the correct column width.
+  const rowSpanRemaining = new Array(columnCount).fill(0);
+
+  const rows = Array.from(tableEl.rows).map((row) => {
+    const isHeaderRow = row.parentElement.tagName === "THEAD";
+
+    let columnIndex = 0;
+    const cells = Array.from(row.cells).map((cell) => {
+      // Skip the columns that a rowspan from a previous row still covers.
+      while (columnIndex < columnCount && rowSpanRemaining[columnIndex] > 0) {
+        columnIndex += 1;
+      }
+
+      const colSpan = cell.colSpan > 1 ? cell.colSpan : 1;
+      const rowSpan = cell.rowSpan > 1 ? cell.rowSpan : 1;
+
+      let widthTwip = 0;
+      for (let i = 0; i < colSpan; i++) {
+        widthTwip += columnWidths[columnIndex + i] || 0;
+        rowSpanRemaining[columnIndex + i] = rowSpan;
+      }
+      columnIndex += colSpan;
+
+      if (!widthTwip) {
+        widthTwip = pxToTwip(cell.getBoundingClientRect().width);
+      }
+
+      return domCellToDocxCell(cell, widthTwip, docxLib);
+    });
+
+    for (let i = 0; i < columnCount; i++) {
+      if (rowSpanRemaining[i] > 0) rowSpanRemaining[i] -= 1;
+    }
+
+    return new TableRow({
+      tableHeader: isHeaderRow,
+      cantSplit: true,
+      height: {
+        value: pxToTwip(row.getBoundingClientRect().height),
+        rule: HeightRule.ATLEAST,
+      },
+      children: cells,
+    });
+  });
+
+  return new Table({
+    layout: TableLayoutType.FIXED,
+    columnWidths,
+    width: { size: totalWidthTwip, type: WidthType.DXA },
+    indent: { size: indentTwip, type: WidthType.DXA },
+    rows,
+  });
+}
+
+/*
+ * Convert a heading/date line from the preview into a Word paragraph
+ * that keeps its font, weight, alignment, indents and the vertical
+ * gap that sits above it in the preview.
+ */
+function domBlockToDocxParagraph(el, page, gaps, docxLib) {
+  const { Paragraph, TextRun, AlignmentType } = docxLib;
+
+  const cs = window.getComputedStyle(el);
+  const pageRect = page.getBoundingClientRect();
+  const rect = el.getBoundingClientRect();
+
+  const indentLeft = Math.max(
+    0,
+    rect.left - pageRect.left + cssNumber(cs.paddingLeft),
+  );
+  const indentRight = Math.max(
+    0,
+    pageRect.right - rect.right + cssNumber(cs.paddingRight),
+  );
+
+  return new Paragraph({
+    alignment: cssAlignment(cs.textAlign, AlignmentType),
+    indent: {
+      left: pxToTwip(indentLeft),
+      right: pxToTwip(indentRight),
+    },
+    spacing: Object.assign(
+      {
+        before: pxToTwip(
+          Math.max(0, (gaps && gaps.before) || 0) + cssNumber(cs.paddingTop),
+        ),
+        after: pxToTwip(
+          Math.max(0, (gaps && gaps.after) || 0) + cssNumber(cs.paddingBottom),
+        ),
+      },
+      cssLineSpacing(cs) || {},
+    ),
+    children: [
+      new TextRun({
+        text: cleanText(el),
+        bold: cssIsBold(cs.fontWeight),
+        size: pxToHalfPoint(cssNumber(cs.fontSize) || 12),
+        color: cssColorToHex(cs.color),
+        font: cssFirstFontFamily(cs.fontFamily),
+      }),
+    ],
+  });
+}
+
 // Preview mode: "attendance" (default), "event", or "participant".
 let previewMode = "attendance";
 
@@ -492,13 +840,19 @@ downloadBtn.addEventListener("click", async () => {
         reject(new Error("Could not load the footer image."));
     });
 
-    const footerHeightMm = Math.min(
-      22,
-      Math.max(
-        12,
-        imgWidth * (footerImage.naturalHeight / footerImage.naturalWidth),
-      ),
-    );
+    /*
+     * Use the footer size exactly as the live preview renders it, so
+     * the exported footer keeps the same height and aspect ratio.
+     */
+    const footerEl = document.getElementById("pdfFooter");
+    const footerRectHeight = footerEl
+      ? footerEl.getBoundingClientRect().height
+      : 0;
+
+    const footerHeightMm = footerRectHeight
+      ? pxToMm(footerRectHeight)
+      : imgWidth * (footerImage.naturalHeight / footerImage.naturalWidth);
+
     const footerY = pageHeight - footerHeightMm;
 
     const addFooter = () => {
@@ -517,8 +871,8 @@ downloadBtn.addEventListener("click", async () => {
     if (imgHeight <= pageHeight + toleranceMm) {
       // One A4 page
       pdf.addImage(
-        canvas.toDataURL("image/jpeg", 0.95),
-        "JPEG",
+        canvas.toDataURL("image/png"),
+        "PNG",
         0,
         0,
         imgWidth,
@@ -566,8 +920,8 @@ downloadBtn.addEventListener("click", async () => {
         }
 
         pdf.addImage(
-          sliceCanvas.toDataURL("image/jpeg", 0.95),
-          "JPEG",
+          sliceCanvas.toDataURL("image/png"),
+          "PNG",
           0,
           0,
           imgWidth,
@@ -676,253 +1030,179 @@ downloadWordBtn.addEventListener("click", async () => {
   downloadWordBtn.disabled = true;
   downloadWordBtn.textContent = "Generating Word...";
 
+  const page = document.getElementById("pdfPage");
+  let restoreLayout = null;
+
   try {
     if (!window.docx) {
       throw new Error(
         "Word library failed to load — check your internet connection and try again.",
       );
     }
-    const {
-      Document,
-      Packer,
-      Paragraph,
-      TextRun,
-      Table,
-      TableRow,
-      TableCell,
-      ImageRun,
-      AlignmentType,
-      WidthType,
-      HeadingLevel,
-      VerticalAlign,
-    } = window.docx;
 
-    // Reuse the same header image already embedded on the page (base64).
-    const headerImgEl = document.querySelector(
-      '#pdfPage img[alt="AIUB IEEE Header"]',
-    );
+    const docxLib = window.docx;
+    const { Document, Packer, Paragraph, TextRun, ImageRun, Footer } = docxLib;
+
+    /*
+     * Measure the preview exactly as it is drawn for the PDF, so the
+     * Word file and the PDF are built from the very same geometry.
+     */
+    page.classList.add("pdf-capture");
+    restoreLayout = lockPreviewToExportWidth(page);
+
+    // Give the browser time to apply the desktop-size layout.
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    const pageStyle = window.getComputedStyle(page);
+    const baseFont = cssFirstFontFamily(pageStyle.fontFamily);
+    const baseSize = pxToHalfPoint(cssNumber(pageStyle.fontSize) || 12);
+    const baseColor = cssColorToHex(pageStyle.color);
+
+    const headerImgEl = page.querySelector('img[alt="AIUB IEEE Header"]');
+    const footerImgEl = document.getElementById("pdfFooter");
+    const tableEl = tableWrap.querySelector("table");
+
+    if (!headerImgEl) {
+      throw new Error("Header image element was not found.");
+    }
+
+    // ----- Header image (spans the full page width, like the preview)
+    const headerRect = headerImgEl.getBoundingClientRect();
     const headerBytes = await imageUrlToUint8Array(headerImgEl.src);
-    const headerNaturalWidth = headerImgEl.naturalWidth || 1274;
-    const headerNaturalHeight = headerImgEl.naturalHeight || 294;
-    const headerDisplayWidth = 600;
-    const headerDisplayHeight = Math.round(
-      headerDisplayWidth * (headerNaturalHeight / headerNaturalWidth),
-    );
 
     const headerParagraph = new Paragraph({
-      alignment: AlignmentType.CENTER,
+      spacing: { before: 0, after: 0, line: 240, lineRule: "auto" },
       children: [
         new ImageRun({
           data: headerBytes,
           transformation: {
-            width: headerDisplayWidth,
-            height: headerDisplayHeight,
+            width: Math.round(headerRect.width),
+            height: Math.round(headerRect.height),
           },
         }),
       ],
     });
 
-    const brandTitleParagraph = new Paragraph({
-      alignment: AlignmentType.CENTER,
-      spacing: { before: 200 },
-      children: [
-        new TextRun({
-          text: brandTitle.textContent.trim() || DEFAULT_BRAND_TITLE,
-          bold: true,
-          size: 24,
-        }),
-      ],
+    // ----- Text blocks between the header image and the table
+    const blockElements = [participantDate, brandTitle, sheetTitle].filter(
+      isVisibleBlock,
+    );
+
+    let previousBottom = headerRect.bottom;
+    const blockGaps = blockElements.map((el) => {
+      const rect = el.getBoundingClientRect();
+      const before = rect.top - previousBottom;
+      previousBottom = rect.bottom;
+      return { el, before, after: 0 };
     });
 
-    const sheetTitleParagraph = new Paragraph({
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 200 },
-      children: [
-        new TextRun({
-          text: sheetTitle.textContent,
-          bold: true,
-          size: 22,
-        }),
-      ],
-    });
-
-    if (previewMode === "participant") {
-      const participantWidths = { name: 25, email: 35, contact: 25, dep: 15 };
-
-      const participantHeaderRow = new TableRow({
-        tableHeader: true,
-        children: [
-          headerCell("Name", participantWidths.name, AlignmentType.CENTER),
-          headerCell("Email", participantWidths.email, AlignmentType.CENTER),
-          headerCell(
-            "Contact No",
-            participantWidths.contact,
-            AlignmentType.CENTER,
-          ),
-          headerCell("Dep", participantWidths.dep, AlignmentType.CENTER),
-        ],
-      });
-
-      const participantDateParagraph = new Paragraph({
-        alignment: AlignmentType.RIGHT,
-        spacing: { after: 120 },
-        children: [
-          new TextRun({
-            text: `Date: ${formatDateSlash(dateInput.value)}`,
-            bold: true,
-            size: 20,
-          }),
-        ],
-      });
-
-      const participantRows = [];
-      for (let i = 0; i < PARTICIPANT_ROW_COUNT; i++) {
-        participantRows.push(
-          new TableRow({
-            children: [
-              bodyCell("", participantWidths.name),
-              bodyCell("", participantWidths.email),
-              bodyCell("", participantWidths.contact),
-              bodyCell("", participantWidths.dep),
-            ],
-          }),
-        );
-      }
-
-      const participantTable = new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
-        rows: [participantHeaderRow, ...participantRows],
-      });
-
-      const participantDoc = new Document({
-        sections: [
-          {
-            children: [
-              headerParagraph,
-              participantDateParagraph,
-              brandTitleParagraph,
-              participantTable,
-            ],
-          },
-        ],
-      });
-
-      const blob = await Packer.toBlob(participantDoc);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `IEEE_AIUB_Participant_${(titleInput.value.trim() || "List").replace(/[^a-z0-9_-]+/gi, "_")}.docx`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      setStatus("Word document downloaded successfully.");
-      return;
+    // The gap between the last text block and the table becomes the
+    // "space after" of that block, because Word tables have no
+    // spacing-before of their own.
+    if (tableEl && blockGaps.length) {
+      const tableTop = tableEl.getBoundingClientRect().top;
+      blockGaps[blockGaps.length - 1].after = Math.max(
+        0,
+        tableTop - previousBottom,
+      );
     }
 
-    const colWidths = {
-      slot: 15,
-      name: 23,
-      reporting: 17,
-      checkin: 15,
-      checkout: 15,
-      signature: 15,
-    };
+    const blockParagraphs = blockGaps.map((entry) =>
+      domBlockToDocxParagraph(
+        entry.el,
+        page,
+        { before: entry.before, after: entry.after },
+        docxLib,
+      ),
+    );
 
-    function headerCell(text, width, alignment = undefined) {
-      return new TableCell({
-        width: { size: width, type: WidthType.PERCENTAGE },
-        verticalAlign: VerticalAlign.CENTER,
+    // ----- The attendance / event / participant table itself
+    const bodyChildren = [headerParagraph, ...blockParagraphs];
+
+    if (tableEl) {
+      bodyChildren.push(domTableToDocxTable(tableEl, page, docxLib));
+    }
+
+    // ----- Footer image, repeated at the bottom of every page
+    let footerSection;
+    let footerHeightTwip = 0;
+
+    if (footerImgEl) {
+      const footerRect = footerImgEl.getBoundingClientRect();
+      const footerHeightPx = Math.round(footerRect.height);
+      const footerWidthPx = Math.round(footerRect.width);
+      footerHeightTwip = pxToTwip(footerHeightPx);
+
+      const footerBytes = await imageUrlToUint8Array(footerImgEl.src);
+
+      footerSection = new Footer({
         children: [
           new Paragraph({
-            alignment,
-            children: [new TextRun({ text, bold: true })],
+            spacing: { before: 0, after: 0, line: 240, lineRule: "auto" },
+            children: [
+              new ImageRun({
+                data: footerBytes,
+                transformation: {
+                  width: footerWidthPx,
+                  height: footerHeightPx,
+                },
+              }),
+            ],
           }),
         ],
       });
     }
 
-    function bodyCell(text, width, opts = {}) {
-      return new TableCell({
-        width: { size: width, type: WidthType.PERCENTAGE },
-        verticalAlign: VerticalAlign.CENTER,
-        rowSpan: opts.rowSpan,
-        children: [new Paragraph({ text: text || "" })],
-      });
-    }
-
-    const headerRow = new TableRow({
-      tableHeader: true,
-      children: [
-        headerCell("Slot Time", colWidths.slot),
-        headerCell("Name", colWidths.name),
-        headerCell("Reporting Time", colWidths.reporting),
-        headerCell("Check In Time", colWidths.checkin),
-        headerCell("Check Out Time", colWidths.checkout),
-        headerCell("Signature", colWidths.signature),
-      ],
-    });
-
-    // Group entries by slot, same as the on-screen table (rowSpan merge).
-    const groups = [];
-    const map = new Map();
-    entries.forEach((e) => {
-      if (!map.has(e.slot)) {
-        const group = { slot: e.slot, people: [] };
-        map.set(e.slot, group);
-        groups.push(group);
-      }
-      map.get(e.slot).people.push(e);
-    });
-
-    const bodyRows = [];
-    groups.forEach((group) => {
-      group.people.forEach((person, idx) => {
-        const cells = [];
-        if (idx === 0) {
-          cells.push(
-            bodyCell(group.slot, colWidths.slot, {
-              rowSpan: group.people.length,
-            }),
-          );
-        }
-        cells.push(
-          bodyCell(person.name, colWidths.name),
-          bodyCell(person.reporting, colWidths.reporting),
-          bodyCell("", colWidths.checkin),
-          bodyCell("", colWidths.checkout),
-          bodyCell("", colWidths.signature),
-        );
-        bodyRows.push(new TableRow({ children: cells }));
-      });
-    });
-
-    const table = new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      rows: [headerRow, ...bodyRows],
-    });
-
     const doc = new Document({
+      styles: {
+        default: {
+          document: {
+            run: { font: baseFont, size: baseSize, color: baseColor },
+            paragraph: {
+              spacing: { before: 0, after: 0, line: 240, lineRule: "auto" },
+            },
+          },
+        },
+      },
       sections: [
         {
-          children: [
-            headerParagraph,
-            brandTitleParagraph,
-            sheetTitleParagraph,
-            table,
-          ],
+          properties: {
+            page: {
+              size: { width: A4_WIDTH_TWIP, height: A4_HEIGHT_TWIP },
+              margin: {
+                top: 0,
+                right: 0,
+                bottom: footerHeightTwip,
+                left: 0,
+                header: 0,
+                footer: 0,
+                gutter: 0,
+              },
+            },
+          },
+          footers: footerSection ? { default: footerSection } : undefined,
+          children: bodyChildren,
         },
       ],
     });
 
-    const blob = await Packer.toBlob(doc);
+    // Every measurement is done: give the preview its own layout back.
+    restoreLayout();
+    restoreLayout = null;
+    page.classList.remove("pdf-capture");
 
-    const d = dateInput.value || "attendance";
-    const safeDate = d.replaceAll("-", "_");
+    const blob = await Packer.toBlob(doc);
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `IEEE_AIUB_Attendance_${safeDate}.docx`;
+
+    if (previewMode === "participant") {
+      a.download = `IEEE_AIUB_Participant_${(titleInput.value.trim() || "List").replace(/[^a-z0-9_-]+/gi, "_")}.docx`;
+    } else {
+      const d = dateInput.value || "attendance";
+      a.download = `IEEE_AIUB_Attendance_${d.replaceAll("-", "_")}.docx`;
+    }
+
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -936,6 +1216,9 @@ downloadWordBtn.addEventListener("click", async () => {
       "error",
     );
   } finally {
+    if (restoreLayout) restoreLayout();
+    page.classList.remove("pdf-capture");
+
     downloadWordBtn.disabled = false;
     downloadWordBtn.textContent = originalText;
   }

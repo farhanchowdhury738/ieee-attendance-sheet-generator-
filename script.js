@@ -663,10 +663,10 @@ function renderParticipantTable() {
 function updateControlsForMode() {
   const participant = previewMode === "participant";
 
-  dateControl.style.display = participant ? "none" : "block";
-  entryControls.style.display = participant ? "none" : "";
-  entryActionButtons.style.display = participant ? "none" : "";
-  entriesSection.style.display = participant ? "none" : "";
+  dateControl.style.display = "block";
+  entryControls.style.display = "";
+  entryActionButtons.style.display = "";
+  entriesSection.style.display = "";
 
   if (participant) {
     previewTitle.textContent = "Live Participant Preview";

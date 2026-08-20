@@ -37,30 +37,36 @@ function escapeHtml(value) {
 
 function parseTimeRange(raw) {
   const cleaned = raw.trim().replace(/\s+/g, "").replace(/[–—]/g, "-");
+
   const parts = cleaned.split("-");
   if (parts.length !== 2) return null;
 
   const parseOne = (part) => {
-    const m = part.match(/^(\d{1,2})(?::(\d{1,2}))?(AM|PM)?$/i);
+    const m = part.match(/^(\d{1,2})(?:(:|\.)(\d{1,2}))?(AM|PM)?$/i);
+
     if (!m) return null;
 
     let hour = Number(m[1]);
-    let minute = Number(m[2] || 0);
-    const mer = m[3] ? m[3].toUpperCase() : null;
+    let minute = Number(m[3] || 0);
+    const mer = m[4] ? m[4].toUpperCase() : null;
 
     if (minute > 59) return null;
+
     if (mer) {
       if (hour < 1 || hour > 12) return null;
+
       if (mer === "AM" && hour === 12) hour = 0;
       if (mer === "PM" && hour !== 12) hour += 12;
     } else {
       if (hour > 23) return null;
     }
+
     return { hour, minute };
   };
 
   const start = parseOne(parts[0]);
   const end = parseOne(parts[1]);
+
   if (!start || !end) return null;
 
   return { start, end };
@@ -72,6 +78,17 @@ function format12(time) {
   const suffix = h >= 12 ? "PM" : "AM";
   h = h % 12 || 12;
   return `${String(h).padStart(2, "0")}:${m} ${suffix}`;
+}
+
+function format24(time) {
+  const hour = String(time.hour).padStart(2, "0");
+  const minute = String(time.minute).padStart(2, "0");
+
+  return `${hour}:${minute}`;
+}
+
+function formatTimeRange(parsed) {
+  return `${format24(parsed.start)}-${format24(parsed.end)}`;
 }
 
 function formatSlot(raw) {
@@ -200,8 +217,8 @@ function addEntry() {
     return;
   }
 
-  const slot = formatSlot(rawTime);
-  const reporting = format12(parsed.start);
+const slot = formatTimeRange(parsed);
+const reporting = format12(parsed.start);
 
   entries.push({ slot, name, reporting });
 
@@ -267,7 +284,7 @@ downloadBtn.addEventListener("click", async () => {
       backgroundColor: "#ffffff",
       logging: false,
       width: 794,
-      windowWidth: 794
+      windowWidth: 794,
     });
 
     const { jsPDF } = window.jspdf;
@@ -288,7 +305,6 @@ downloadBtn.addEventListener("click", async () => {
     const toleranceMm = 1;
 
     if (imgHeight <= pageHeight + toleranceMm) {
-
       // One A4 page
       pdf.addImage(
         canvas.toDataURL("image/jpeg", 0.95),
@@ -296,11 +312,9 @@ downloadBtn.addEventListener("click", async () => {
         0,
         0,
         imgWidth,
-        imgHeight
+        imgHeight,
       );
-
     } else {
-
       // Multiple A4 pages
       const pxPerMm = canvas.width / imgWidth;
       const toleranceForLastSlicePx = toleranceMm * pxPerMm;
@@ -310,10 +324,9 @@ downloadBtn.addEventListener("click", async () => {
       let first = true;
 
       while (canvas.height - renderedPx > toleranceForLastSlicePx) {
-
         const sliceHeightPx = Math.min(
           pageHeightPx,
-          canvas.height - renderedPx
+          canvas.height - renderedPx,
         );
 
         const sliceCanvas = document.createElement("canvas");
@@ -332,7 +345,7 @@ downloadBtn.addEventListener("click", async () => {
           0,
           0,
           canvas.width,
-          sliceHeightPx
+          sliceHeightPx,
         );
 
         const sliceHeightMm = sliceHeightPx / pxPerMm;
@@ -347,7 +360,7 @@ downloadBtn.addEventListener("click", async () => {
           0,
           0,
           imgWidth,
-          sliceHeightMm
+          sliceHeightMm,
         );
 
         renderedPx += sliceHeightPx;
@@ -361,28 +374,22 @@ downloadBtn.addEventListener("click", async () => {
     pdf.save(`IEEE_AIUB_Attendance_${safeDate}.pdf`);
 
     setStatus("PDF downloaded successfully.");
-
   } catch (error) {
-
     console.error(error);
 
     const isTainted = /tainted|SecurityError|insecure/i.test(
-      String(error && error.message)
+      String(error && error.message),
     );
 
     setStatus(
       isTainted
         ? "PDF generation failed: the browser blocked reading the page image."
         : `PDF generation failed: ${
-            error && error.message
-              ? error.message
-              : "unknown error"
+            error && error.message ? error.message : "unknown error"
           }`,
-      "error"
+      "error",
     );
-
   } finally {
-
     // Remove PDF mode
     page.classList.remove("pdf-capture");
 

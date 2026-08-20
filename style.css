@@ -270,12 +270,6 @@ textarea:focus {
   }
 }
 
-
-
-
-
-
-
 /* =========================================
    RESPONSIVE DESIGN
    ========================================= */
@@ -287,27 +281,22 @@ body {
   overflow-x: hidden;
 }
 
-
 /* =========================================
    TABLET
    ========================================= */
 
 @media (max-width: 1023px) {
-
   .preview-page {
     width: 100%;
     min-height: auto;
   }
-
 }
-
 
 /* =========================================
    MOBILE
    ========================================= */
 
 @media (max-width: 767px) {
-
   /* Main layout */
   main {
     width: 100% !important;
@@ -323,7 +312,6 @@ body {
     padding-bottom: 24px !important;
   }
 
-
   /* Header */
   .no-print.sticky > div {
     padding-left: 14px !important;
@@ -332,11 +320,9 @@ body {
     padding-bottom: 12px !important;
   }
 
-
   .no-print.sticky h1 {
     font-size: 17px !important;
   }
-
 
   /* Left control panel */
   main > section.no-print {
@@ -350,7 +336,6 @@ body {
     border-radius: 18px !important;
   }
 
-
   /* Inputs */
   main > section.no-print input,
   main > section.no-print select,
@@ -362,18 +347,15 @@ body {
     font-size: 16px !important;
   }
 
-
   /* Time + Name */
   main > section.no-print > div.grid {
     grid-template-columns: 1fr !important;
   }
 
-
   /* Buttons */
   main > section.no-print button {
     min-height: 46px;
   }
-
 
   /* Entries */
   #entryList {
@@ -382,7 +364,6 @@ body {
     min-width: 0;
   }
 
-
   /* Preview section */
   main > section:not(.no-print) {
     width: 100%;
@@ -390,14 +371,12 @@ body {
     min-width: 0;
   }
 
-
   /* Preview */
   #pdfPage {
     width: 100% !important;
 
     min-width: 0 !important;
   }
-
 
   /* Attendance table scroll */
   #tableWrap {
@@ -408,45 +387,37 @@ body {
     -webkit-overflow-scrolling: touch;
   }
 
-
   .attendance-table {
     min-width: 720px;
 
     font-size: 11px;
   }
 
-
   .attendance-table th,
   .attendance-table td {
     padding: 6px 5px;
   }
-
 
   /* Status */
   #status {
     word-break: break-word;
   }
 
-
   /* Empty state */
   .empty-state {
     padding: 24px 12px;
   }
-
 }
-
 
 /* =========================================
    SMALL MOBILE
    ========================================= */
 
 @media (max-width: 420px) {
-
   main {
     padding-left: 8px !important;
     padding-right: 8px !important;
   }
-
 
   main > section.no-print {
     padding: 13px !important;
@@ -454,38 +425,31 @@ body {
     border-radius: 16px !important;
   }
 
-
   .attendance-table {
     min-width: 680px;
 
     font-size: 10px;
   }
 
-
   .attendance-table th,
   .attendance-table td {
     padding: 5px 4px;
   }
 
-
   #entryList {
     max-height: 260px !important;
   }
-
 }
-
 
 /* =========================================
    PRINT / PDF
    ========================================= */
 
 @media print {
-
   html,
   body {
     overflow: visible !important;
   }
-
 
   .preview-page {
     width: 794px !important;
@@ -493,9 +457,50 @@ body {
     min-height: 1123px !important;
   }
 
-
   .attendance-table {
     min-width: 0 !important;
   }
+}
+/* Participant table column widths */
+.attendance-table .participant-name {
+  width: 25%;
+}
 
+.attendance-table .participant-email {
+  width: 42%;
+}
+
+.attendance-table .participant-contact {
+  width: 21%;
+}
+
+.attendance-table .participant-dep {
+  width: 12%;
+}
+
+.participant-table th,
+.participant-table td {
+  height: 27px;
+  padding: 5px 6px;
+}
+
+.participant-table th {
+  text-align: center !important;
+  vertical-align: middle;
+}
+
+.participant-date {
+  display: none;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 22px 0;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #111827;
+}
+
+.pdf-capture .participant-table th {
+  text-align: center !important;
 }

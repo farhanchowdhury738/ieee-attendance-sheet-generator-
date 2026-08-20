@@ -11,18 +11,26 @@ const downloadBtn = document.getElementById("downloadBtn");
 const downloadWordBtn = document.getElementById("downloadWordBtn");
 const eventBtn = document.getElementById("eventBtn");
 const eventBtnLabel = document.getElementById("eventBtnLabel");
+const participantBtn = document.getElementById("participantBtn");
+const dateControl = document.getElementById("dateControl");
+const entryControls = document.getElementById("entryControls");
+const entryActionButtons = document.getElementById("entryActionButtons");
+const entriesSection = document.getElementById("entriesSection");
 const entryList = document.getElementById("entryList");
 const countBadge = document.getElementById("countBadge");
 const tableWrap = document.getElementById("tableWrap");
 const sheetTitle = document.getElementById("sheetTitle");
 const brandTitle = document.getElementById("brandTitle");
 const previewTitle = document.getElementById("previewTitle");
+const participantDate = document.getElementById("participantDate");
 const statusBox = document.getElementById("status");
 
 const DEFAULT_BRAND_TITLE = "IEEE AIUB Student Branch";
 
-// Preview mode: "attendance" (default) or "event".
+// Preview mode: "attendance" (default), "event", or "participant".
 let previewMode = "attendance";
+
+const PARTICIPANT_ROW_COUNT = 24;
 
 // Default date = today.
 const today = new Date();
@@ -114,6 +122,13 @@ function formatDateLong(dateString) {
   return `Attendance Sheet ${weekday} ${month} ${d.getDate()}, ${d.getFullYear()}`;
 }
 
+function formatDateSlash(dateString) {
+  if (!dateString) return "";
+  const [year, month, day] = dateString.split("-");
+  if (!year || !month || !day) return "";
+  return `${day}/${month}/${year}`;
+}
+
 function setStatus(message, type = "success") {
   statusBox.textContent = message;
   statusBox.className =
@@ -155,6 +170,14 @@ function renderEntries() {
 }
 
 function renderTable() {
+  if (previewMode === "participant") {
+    sheetTitle.textContent = "";
+    participantDate.style.display = "block";
+    renderParticipantTable();
+    return;
+  }
+
+  participantDate.style.display = "none";
   sheetTitle.textContent = formatDateLong(dateInput.value);
 
   if (!entries.length) {
@@ -252,7 +275,70 @@ function renderEventTable() {
     `;
 }
 
+function renderParticipantTable() {
+  let rows = "";
+  for (let i = 0; i < PARTICIPANT_ROW_COUNT; i++) {
+    rows += `
+      <tr>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>`;
+  }
+
+  const participantDateText = formatDateSlash(dateInput.value);
+  participantDate.textContent = `Date: ${participantDateText}`;
+  participantDate.style.display = "block";
+
+  tableWrap.innerHTML = `
+    <table class="attendance-table participant-table">
+      <colgroup>
+        <col class="participant-name">
+        <col class="participant-email">
+        <col class="participant-contact">
+        <col class="participant-dep">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Contact No</th>
+          <th>Dep</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+function updateControlsForMode() {
+  const participant = previewMode === "participant";
+
+  dateControl.style.display = participant ? "none" : "block";
+  entryControls.style.display = participant ? "none" : "";
+  entryActionButtons.style.display = participant ? "none" : "";
+  entriesSection.style.display = participant ? "none" : "";
+
+  if (participant) {
+    previewTitle.textContent = "Live Participant Preview";
+    brandTitle.textContent = titleInput.value.trim() || DEFAULT_BRAND_TITLE;
+    sheetTitle.style.display = "none";
+    eventBtnLabel.textContent = "Event";
+  } else if (previewMode === "event") {
+    previewTitle.textContent = "Live Event Preview";
+    sheetTitle.style.display = "block";
+    brandTitle.textContent = titleInput.value.trim() || DEFAULT_BRAND_TITLE;
+  } else {
+    previewTitle.textContent = "Live Attendance Preview";
+    sheetTitle.style.display = "block";
+    brandTitle.textContent = DEFAULT_BRAND_TITLE;
+  }
+}
+
 function addEntry() {
+  if (previewMode === "participant") return;
+
   const rawTime = timeInput.value.trim();
   const name = nameInput.value.trim();
   const id = idInput.value.trim();
@@ -316,29 +402,26 @@ clearBtn.addEventListener("click", () => {
 eventBtn.addEventListener("click", () => {
   previewMode = previewMode === "event" ? "attendance" : "event";
 
-  if (previewMode === "event") {
-    eventBtnLabel.textContent = "Attendance";
-    previewTitle.textContent = "Live Event Preview";
-    brandTitle.textContent = titleInput.value.trim() || DEFAULT_BRAND_TITLE;
-  } else {
-    eventBtnLabel.textContent = "Event";
-    previewTitle.textContent = "Live Attendance Preview";
-    brandTitle.textContent = DEFAULT_BRAND_TITLE;
-  }
-
+  eventBtnLabel.textContent = previewMode === "event" ? "Attendance" : "Event";
+  updateControlsForMode();
   renderTable();
 });
 
-// Keep the preview title in sync live while typing, but only while
-// the Event view is showing.
+participantBtn.addEventListener("click", () => {
+  previewMode = previewMode === "participant" ? "attendance" : "participant";
+  updateControlsForMode();
+  renderTable();
+});
+
+// Keep the title in the participant/event preview in sync while typing.
 titleInput.addEventListener("input", () => {
-  if (previewMode === "event") {
+  if (previewMode === "event" || previewMode === "participant") {
     brandTitle.textContent = titleInput.value.trim() || DEFAULT_BRAND_TITLE;
   }
 });
 
 downloadBtn.addEventListener("click", async () => {
-  if (!entries.length) {
+  if (!entries.length && previewMode !== "participant") {
     setStatus("Add at least one entry before downloading the PDF.", "error");
     return;
   }
@@ -409,9 +492,13 @@ downloadBtn.addEventListener("click", async () => {
         reject(new Error("Could not load the footer image."));
     });
 
-    const footerHeightMm = Math.min(22, Math.max(12,
-      imgWidth * (footerImage.naturalHeight / footerImage.naturalWidth)
-    ));
+    const footerHeightMm = Math.min(
+      22,
+      Math.max(
+        12,
+        imgWidth * (footerImage.naturalHeight / footerImage.naturalWidth),
+      ),
+    );
     const footerY = pageHeight - footerHeightMm;
 
     const addFooter = () => {
@@ -497,7 +584,15 @@ downloadBtn.addEventListener("click", async () => {
     const d = dateInput.value || "attendance";
     const safeDate = d.replaceAll("-", "_");
 
-    pdf.save(`IEEE_AIUB_Attendance_${safeDate}.pdf`);
+    if (previewMode === "participant") {
+      const safeTitle = (titleInput.value.trim() || "Participant_List").replace(
+        /[^a-z0-9_-]+/gi,
+        "_",
+      );
+      pdf.save(`IEEE_AIUB_Participant_${safeTitle}.pdf`);
+    } else {
+      pdf.save(`IEEE_AIUB_Attendance_${safeDate}.pdf`);
+    }
 
     setStatus("PDF downloaded successfully.");
   } catch (error) {
@@ -569,7 +664,7 @@ async function imageUrlToUint8Array(url) {
 }
 
 downloadWordBtn.addEventListener("click", async () => {
-  if (!entries.length) {
+  if (!entries.length && previewMode !== "participant") {
     setStatus(
       "Add at least one entry before downloading the Word file.",
       "error",
@@ -651,6 +746,80 @@ downloadWordBtn.addEventListener("click", async () => {
       ],
     });
 
+    if (previewMode === "participant") {
+      const participantWidths = { name: 25, email: 35, contact: 25, dep: 15 };
+
+      const participantHeaderRow = new TableRow({
+        tableHeader: true,
+        children: [
+          headerCell("Name", participantWidths.name, AlignmentType.CENTER),
+          headerCell("Email", participantWidths.email, AlignmentType.CENTER),
+          headerCell(
+            "Contact No",
+            participantWidths.contact,
+            AlignmentType.CENTER,
+          ),
+          headerCell("Dep", participantWidths.dep, AlignmentType.CENTER),
+        ],
+      });
+
+      const participantDateParagraph = new Paragraph({
+        alignment: AlignmentType.RIGHT,
+        spacing: { after: 120 },
+        children: [
+          new TextRun({
+            text: `Date: ${formatDateSlash(dateInput.value)}`,
+            bold: true,
+            size: 20,
+          }),
+        ],
+      });
+
+      const participantRows = [];
+      for (let i = 0; i < PARTICIPANT_ROW_COUNT; i++) {
+        participantRows.push(
+          new TableRow({
+            children: [
+              bodyCell("", participantWidths.name),
+              bodyCell("", participantWidths.email),
+              bodyCell("", participantWidths.contact),
+              bodyCell("", participantWidths.dep),
+            ],
+          }),
+        );
+      }
+
+      const participantTable = new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [participantHeaderRow, ...participantRows],
+      });
+
+      const participantDoc = new Document({
+        sections: [
+          {
+            children: [
+              headerParagraph,
+              participantDateParagraph,
+              brandTitleParagraph,
+              participantTable,
+            ],
+          },
+        ],
+      });
+
+      const blob = await Packer.toBlob(participantDoc);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `IEEE_AIUB_Participant_${(titleInput.value.trim() || "List").replace(/[^a-z0-9_-]+/gi, "_")}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setStatus("Word document downloaded successfully.");
+      return;
+    }
+
     const colWidths = {
       slot: 15,
       name: 23,
@@ -660,12 +829,13 @@ downloadWordBtn.addEventListener("click", async () => {
       signature: 15,
     };
 
-    function headerCell(text, width) {
+    function headerCell(text, width, alignment = undefined) {
       return new TableCell({
         width: { size: width, type: WidthType.PERCENTAGE },
         verticalAlign: VerticalAlign.CENTER,
         children: [
           new Paragraph({
+            alignment,
             children: [new TextRun({ text, bold: true })],
           }),
         ],
@@ -735,7 +905,12 @@ downloadWordBtn.addEventListener("click", async () => {
     const doc = new Document({
       sections: [
         {
-          children: [headerParagraph, brandTitleParagraph, sheetTitleParagraph, table],
+          children: [
+            headerParagraph,
+            brandTitleParagraph,
+            sheetTitleParagraph,
+            table,
+          ],
         },
       ],
     });
@@ -767,4 +942,5 @@ downloadWordBtn.addEventListener("click", async () => {
 });
 
 renderEntries();
+updateControlsForMode();
 renderTable();

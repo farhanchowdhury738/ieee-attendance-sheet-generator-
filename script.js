@@ -3,15 +3,26 @@ const entries = [];
 const dateInput = document.getElementById("dateInput");
 const timeInput = document.getElementById("timeInput");
 const nameInput = document.getElementById("nameInput");
+const idInput = document.getElementById("idInput");
+const titleInput = document.getElementById("titleInput");
 const addBtn = document.getElementById("addBtn");
 const clearBtn = document.getElementById("clearBtn");
 const downloadBtn = document.getElementById("downloadBtn");
 const downloadWordBtn = document.getElementById("downloadWordBtn");
+const eventBtn = document.getElementById("eventBtn");
+const eventBtnLabel = document.getElementById("eventBtnLabel");
 const entryList = document.getElementById("entryList");
 const countBadge = document.getElementById("countBadge");
 const tableWrap = document.getElementById("tableWrap");
 const sheetTitle = document.getElementById("sheetTitle");
+const brandTitle = document.getElementById("brandTitle");
+const previewTitle = document.getElementById("previewTitle");
 const statusBox = document.getElementById("status");
+
+const DEFAULT_BRAND_TITLE = "IEEE AIUB Student Branch";
+
+// Preview mode: "attendance" (default) or "event".
+let previewMode = "attendance";
 
 // Default date = today.
 const today = new Date();
@@ -125,7 +136,7 @@ function renderEntries() {
       (e, i) => `
       <div class="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
         <div class="min-w-0 flex-1">
-          <div class="truncate text-sm font-semibold text-slate-800">${escapeHtml(e.name)}</div>
+          <div class="truncate text-sm font-semibold text-slate-800">${escapeHtml(e.name)}${e.id ? ` <span class="font-normal text-slate-400">(${escapeHtml(e.id)})</span>` : ""}</div>
           <div class="text-xs text-slate-500">${escapeHtml(e.slot)} • ${escapeHtml(e.reporting)}</div>
         </div>
         <button data-delete="${i}" class="rounded-lg px-2.5 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50">Delete</button>
@@ -147,7 +158,14 @@ function renderTable() {
   sheetTitle.textContent = formatDateLong(dateInput.value);
 
   if (!entries.length) {
-    tableWrap.innerHTML = `<div class="empty-state">Add at least one entry from the left panel to build the attendance table.</div>`;
+    tableWrap.innerHTML = `<div class="empty-state">Add at least one entry from the left panel to build the ${
+      previewMode === "event" ? "event" : "attendance"
+    } table.</div>`;
+    return;
+  }
+
+  if (previewMode === "event") {
+    renderEventTable();
     return;
   }
 
@@ -202,28 +220,75 @@ function renderTable() {
     `;
 }
 
+function renderEventTable() {
+  let rows = "";
+
+  entries.forEach((person) => {
+    rows += `
+        <tr>
+          <td>${escapeHtml(person.name)}</td>
+          <td>${escapeHtml(person.id || "")}</td>
+          <td></td>
+          <td></td>
+        </tr>`;
+  });
+
+  tableWrap.innerHTML = `
+      <table class="attendance-table">
+        <colgroup>
+          <col class="event-name"><col class="event-id">
+          <col class="event-reporting"><col class="event-signature">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>ID</th>
+            <th>Reporting Time</th>
+            <th>Signature</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+}
+
 function addEntry() {
-  const rawTime = timeInput.value;
+  const rawTime = timeInput.value.trim();
   const name = nameInput.value.trim();
+  const id = idInput.value.trim();
+  const title = titleInput.value.trim();
 
-  if (!rawTime || !name) {
-    setStatus("Please enter both Time Range and Name.", "error");
-    return;
+  if (previewMode === "event") {
+    if (!name || !id || !title) {
+      setStatus("Please fill up Name, ID and Title.", "error");
+      return;
+    }
+  } else {
+    if (!rawTime || !name) {
+      setStatus("Please enter both Time Range and Name.", "error");
+      return;
+    }
   }
 
-  const parsed = parseTimeRange(rawTime);
-  if (!parsed) {
-    setStatus("Invalid time range. Example: 9:00-10:00", "error");
-    return;
+  let slot = "";
+  let reporting = "";
+
+  if (rawTime) {
+    const parsed = parseTimeRange(rawTime);
+    if (!parsed) {
+      setStatus("Invalid time range. Example: 9:00-10:00", "error");
+      return;
+    }
+
+    slot = formatTimeRange(parsed);
+    reporting = format12(parsed.start);
   }
 
-const slot = formatTimeRange(parsed);
-const reporting = format12(parsed.start);
-
-  entries.push({ slot, name, reporting });
+  entries.push({ slot, name, id, reporting });
 
   timeInput.value = "";
   nameInput.value = "";
+  idInput.value = "";
   timeInput.focus();
 
   renderEntries();
@@ -233,7 +298,7 @@ const reporting = format12(parsed.start);
 
 addBtn.addEventListener("click", addEntry);
 
-[timeInput, nameInput].forEach((input) => {
+[timeInput, nameInput, idInput, titleInput].forEach((input) => {
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter") addEntry();
   });
@@ -246,6 +311,30 @@ clearBtn.addEventListener("click", () => {
   renderEntries();
   renderTable();
   setStatus("All entries cleared.");
+});
+
+eventBtn.addEventListener("click", () => {
+  previewMode = previewMode === "event" ? "attendance" : "event";
+
+  if (previewMode === "event") {
+    eventBtnLabel.textContent = "Attendance";
+    previewTitle.textContent = "Live Event Preview";
+    brandTitle.textContent = titleInput.value.trim() || DEFAULT_BRAND_TITLE;
+  } else {
+    eventBtnLabel.textContent = "Event";
+    previewTitle.textContent = "Live Attendance Preview";
+    brandTitle.textContent = DEFAULT_BRAND_TITLE;
+  }
+
+  renderTable();
+});
+
+// Keep the preview title in sync live while typing, but only while
+// the Event view is showing.
+titleInput.addEventListener("input", () => {
+  if (previewMode === "event") {
+    brandTitle.textContent = titleInput.value.trim() || DEFAULT_BRAND_TITLE;
+  }
 });
 
 downloadBtn.addEventListener("click", async () => {
@@ -278,6 +367,11 @@ downloadBtn.addEventListener("click", async () => {
     // Give browser time to apply the desktop-size layout
     await new Promise((resolve) => setTimeout(resolve, 200));
 
+    // Load the footer image once and place it at the bottom of every A4 page.
+    const footerDataUrl = await imageElementToDataUrl(
+      document.getElementById("pdfFooter"),
+    );
+
     const canvas = await html2canvas(page, {
       scale: 3,
       useCORS: true,
@@ -304,6 +398,35 @@ downloadBtn.addEventListener("click", async () => {
 
     const toleranceMm = 1;
 
+    // Keep the footer at the same A4 position as the reference PDF.
+    // It is drawn separately so every page gets the footer, including
+    // multi-page attendance sheets.
+    const footerImage = new Image();
+    footerImage.src = footerDataUrl;
+    await new Promise((resolve, reject) => {
+      footerImage.onload = resolve;
+      footerImage.onerror = () =>
+        reject(new Error("Could not load the footer image."));
+    });
+
+    const footerHeightMm = Math.min(22, Math.max(12,
+      imgWidth * (footerImage.naturalHeight / footerImage.naturalWidth)
+    ));
+    const footerY = pageHeight - footerHeightMm;
+
+    const addFooter = () => {
+      pdf.addImage(
+        footerDataUrl,
+        "PNG",
+        0,
+        footerY,
+        imgWidth,
+        footerHeightMm,
+        undefined,
+        "FAST",
+      );
+    };
+
     if (imgHeight <= pageHeight + toleranceMm) {
       // One A4 page
       pdf.addImage(
@@ -314,6 +437,7 @@ downloadBtn.addEventListener("click", async () => {
         imgWidth,
         imgHeight,
       );
+      addFooter();
     } else {
       // Multiple A4 pages
       const pxPerMm = canvas.width / imgWidth;
@@ -363,6 +487,8 @@ downloadBtn.addEventListener("click", async () => {
           sliceHeightMm,
         );
 
+        addFooter();
+
         renderedPx += sliceHeightPx;
         first = false;
       }
@@ -401,6 +527,33 @@ downloadBtn.addEventListener("click", async () => {
     downloadBtn.textContent = originalText;
   }
 });
+
+async function imageElementToDataUrl(imageElement) {
+  if (!imageElement) {
+    throw new Error("Footer image element was not found.");
+  }
+
+  if (!imageElement.complete || !imageElement.naturalWidth) {
+    await new Promise((resolve, reject) => {
+      imageElement.onload = resolve;
+      imageElement.onerror = () =>
+        reject(new Error("Could not load the footer image."));
+    });
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = imageElement.naturalWidth;
+  canvas.height = imageElement.naturalHeight;
+
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(imageElement, 0, 0);
+
+  try {
+    return canvas.toDataURL("image/png");
+  } catch (error) {
+    throw new Error("Could not read the footer image.");
+  }
+}
 
 async function imageUrlToUint8Array(url) {
   const response = await fetch(url);
@@ -474,12 +627,12 @@ downloadWordBtn.addEventListener("click", async () => {
       ],
     });
 
-    const brandTitle = new Paragraph({
+    const brandTitleParagraph = new Paragraph({
       alignment: AlignmentType.CENTER,
       spacing: { before: 200 },
       children: [
         new TextRun({
-          text: "IEEE AIUB Student Branch",
+          text: brandTitle.textContent.trim() || DEFAULT_BRAND_TITLE,
           bold: true,
           size: 24,
         }),
@@ -582,7 +735,7 @@ downloadWordBtn.addEventListener("click", async () => {
     const doc = new Document({
       sections: [
         {
-          children: [headerParagraph, brandTitle, sheetTitleParagraph, table],
+          children: [headerParagraph, brandTitleParagraph, sheetTitleParagraph, table],
         },
       ],
     });

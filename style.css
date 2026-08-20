@@ -97,6 +97,27 @@ textarea:focus {
   border-radius: 18px;
 
   overflow: hidden;
+
+  display: flex;
+  flex-direction: column;
+}
+
+/* =========================================
+   PDF FOOTER IMAGE
+   ========================================= */
+
+.pdf-footer {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: auto;
+  flex-shrink: 0;
+}
+
+/* The footer is added directly to every A4 PDF page by jsPDF.
+   Hide it from the canvas capture so it is never duplicated. */
+.pdf-capture .pdf-footer {
+  visibility: hidden;
 }
 
 /* =========================================
@@ -160,6 +181,24 @@ textarea:focus {
   text-align: left;
 
   font-weight: 500;
+}
+
+/* Event table column widths (Name, ID, Reporting Time, Signature) */
+
+.attendance-table .event-name {
+  width: 32%;
+}
+
+.attendance-table .event-id {
+  width: 22%;
+}
+
+.attendance-table .event-reporting {
+  width: 23%;
+}
+
+.attendance-table .event-signature {
+  width: 23%;
 }
 
 /* =========================================

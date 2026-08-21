@@ -463,11 +463,11 @@ body {
 }
 /* Participant table column widths */
 .attendance-table .participant-name {
-  width: 25%;
+  width: 30%;
 }
 
 .attendance-table .participant-email {
-  width: 42%;
+  width: 39%;
 }
 
 .attendance-table .participant-contact {
@@ -475,13 +475,13 @@ body {
 }
 
 .attendance-table .participant-dep {
-  width: 12%;
+  width: 10%;
 }
 
 .participant-table th,
 .participant-table td {
-  height: 27px;
-  padding: 5px 6px;
+  height: 33px;
+  padding: 8px 7px;
 }
 
 .participant-table th {

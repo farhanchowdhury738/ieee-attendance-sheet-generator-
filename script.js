@@ -378,7 +378,7 @@ function domBlockToDocxParagraph(el, page, gaps, docxLib) {
 // Preview mode: "attendance" (default), "event", or "participant".
 let previewMode = "attendance";
 
-const PARTICIPANT_ROW_COUNT = 24;
+const PARTICIPANT_ROW_COUNT = 22;
 
 // Default date = today.
 const today = new Date();
@@ -803,6 +803,62 @@ downloadBtn.addEventListener("click", async () => {
       document.getElementById("pdfFooter"),
     );
 
+    /*
+     * html2canvas does not reproduce "vertical-align: middle" on table
+     * cells the way the browser does, so text can drift toward the
+     * bottom of its cell in the PDF.
+     *
+     * Fix: measure exactly where the browser is already positioning
+     * each cell's text (this page is correctly rendered right now),
+     * then re-apply that exact position as fixed padding on the
+     * cloned copy html2canvas rasterizes, with vertical-align: top so
+     * there is no centering math left for html2canvas to get wrong.
+     * onclone only edits the throwaway clone used for the screenshot,
+     * so the live preview on screen is never touched.
+     */
+
+    // Fine-tune only: raises text by this many px in the exported PDF
+    // (lower it back down with a negative number). Two separate
+    // numbers because header (<th>) text is bold and data-row (<td>)
+    // text is regular weight, so html2canvas can mismeasure each one
+    // differently. Change DATA_CELL_VERTICAL_NUDGE_PX to move the
+    // rows that get created after entering input.
+    const HEADER_TEXT_VERTICAL_NUDGE_PX = 6.5;
+    const DATA_CELL_VERTICAL_NUDGE_PX = 5.5;
+
+    function measureCellVerticalFix(cell, nudgePx) {
+      const cellRect = cell.getBoundingClientRect();
+      const cs = window.getComputedStyle(cell);
+      const borderTop = parseFloat(cs.borderTopWidth) || 0;
+      const borderBottom = parseFloat(cs.borderBottomWidth) || 0;
+
+      const range = document.createRange();
+      range.selectNodeContents(cell);
+      const textRects = Array.from(range.getClientRects()).filter(
+        (r) => r.width > 0 && r.height > 0,
+      );
+      if (!textRects.length) return null;
+
+      const textTop = Math.min(...textRects.map((r) => r.top));
+      const textBottom = Math.max(...textRects.map((r) => r.bottom));
+
+      return {
+        paddingTop: Math.max(0, textTop - (cellRect.top + borderTop) - nudgePx),
+        paddingBottom: Math.max(
+          0,
+          cellRect.bottom - borderBottom - textBottom + nudgePx,
+        ),
+      };
+    }
+
+    const headerVerticalFixes = Array.from(
+      page.querySelectorAll(".attendance-table th"),
+    ).map((th) => measureCellVerticalFix(th, HEADER_TEXT_VERTICAL_NUDGE_PX));
+
+    const dataCellVerticalFixes = Array.from(
+      page.querySelectorAll(".attendance-table td"),
+    ).map((td) => measureCellVerticalFix(td, DATA_CELL_VERTICAL_NUDGE_PX));
+
     const canvas = await html2canvas(page, {
       scale: 3,
       useCORS: true,
@@ -810,6 +866,23 @@ downloadBtn.addEventListener("click", async () => {
       logging: false,
       width: 794,
       windowWidth: 794,
+      onclone: (clonedDoc, clonedPage) => {
+        const applyVerticalFixes = (selector, fixes) => {
+          const cells = clonedPage.querySelectorAll(selector);
+
+          cells.forEach((cell, i) => {
+            const fix = fixes[i];
+            if (!fix) return;
+
+            cell.style.verticalAlign = "top";
+            cell.style.paddingTop = `${fix.paddingTop}px`;
+            cell.style.paddingBottom = `${fix.paddingBottom}px`;
+          });
+        };
+
+        applyVerticalFixes(".attendance-table th", headerVerticalFixes);
+        applyVerticalFixes(".attendance-table td", dataCellVerticalFixes);
+      },
     });
 
     const { jsPDF } = window.jspdf;
